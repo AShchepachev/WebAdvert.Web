@@ -1,10 +1,16 @@
 ﻿using Amazon.AspNetCore.Identity.Cognito;
+using Amazon.CognitoIdentityProvider;
+using Amazon.CognitoIdentityProvider.Model;
 using Amazon.Extensions.CognitoAuthentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using WebAdvert.Web.Models.Accounts;
 
@@ -15,23 +21,28 @@ namespace WebAdvert.Web.Controllers
         private readonly SignInManager<CognitoUser> _signInManager;
         private readonly CognitoUserManager<CognitoUser> _userManager;
         private readonly CognitoUserPool _pool;
+        private readonly IAmazonCognitoIdentityProvider _provider;
+        private readonly IConfiguration _config;
 
         public AccountController(
             SignInManager<CognitoUser> signInManager,
             UserManager<CognitoUser> userManager,
-            CognitoUserPool pool)
+            CognitoUserPool pool,
+            IAmazonCognitoIdentityProvider provider,
+            IConfiguration config)
         {
             _signInManager = signInManager;
             _userManager = userManager as CognitoUserManager<CognitoUser>;
             _pool = pool;
+            _provider = provider;
+            _config = config;
         }
 
 
         [HttpGet]
         public async Task<IActionResult> Signup()
         {
-            SignupModel model = new();
-            return await Task.Run(() => View(model));
+            return await Task.Run(() => View());
         }
 
         [HttpPost]
@@ -52,7 +63,7 @@ namespace WebAdvert.Web.Controllers
 
                 if (createdUser.Succeeded)
                 {
-                    return RedirectToAction("Confirm");
+                    return RedirectToAction("Confirm", new { email = model.Email });
                 }
             }
 
@@ -60,9 +71,9 @@ namespace WebAdvert.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Confirm()
+        public async Task<IActionResult> Confirm(string email)
         {
-            ConfirmModel model = new();
+            ConfirmModel model = new() { Email = email };
 
             return await Task.Run(() => View(model));
         }
@@ -126,5 +137,58 @@ namespace WebAdvert.Web.Controllers
             return await Task.Run(() => View(model));
         }
 
+        [HttpGet]
+        public async Task<IActionResult> ForgotPassword()
+        {
+            var user = await _userManager.FindByEmailAsync("artaws@mailinator.com");
+
+            var request = new ForgotPasswordRequest
+            {
+                ClientId = user.ClientID,
+                Username = user.Username,
+                SecretHash = GetSecretHash(user)
+            };
+            
+            var result = await _provider.ForgotPasswordAsync(request).ConfigureAwait(false);
+
+            if (result.HttpStatusCode == HttpStatusCode.OK)
+            {
+                return RedirectToPage("ConfirmResetPassword");
+            }
+            
+            return await Task.Run(() => View());
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ConfirmResetPassword(ConfirmModel model)
+        {
+            //_pool.ConfirmForgotPassword(model.)
+
+            var user = await _userManager.FindByEmailAsync("artaws@mailinator.com");
+
+            var request = new ForgotPasswordRequest
+            {
+                ClientId = user.ClientID,
+                Username = user.Username,
+                SecretHash = GetSecretHash(user)
+            };
+
+            var result = await _provider.ForgotPasswordAsync(request).ConfigureAwait(false);
+
+            if (result.HttpStatusCode == HttpStatusCode.OK)
+            {
+                return RedirectToPage("ConfirmResetPassword");
+            }
+
+            return await Task.Run(() => View());
+        }
+
+        private string GetSecretHash(CognitoUser user)
+        {
+            var secret = _config["AWS:UserPoolClientSecret"];
+            var bytes = Encoding.UTF8.GetBytes(secret);
+            using var hmac = new HMACSHA256(bytes);
+            return Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(user.Username + user.ClientID)));
+        }
     }
 }
