@@ -19,7 +19,7 @@ namespace WebAdvert.Web.Controllers
     public class AccountController : Controller
     {
         private readonly SignInManager<CognitoUser> _signInManager;
-        private readonly CognitoUserManager<CognitoUser> _userManager;
+        private readonly UserManager<CognitoUser> _userManager;
         private readonly CognitoUserPool _pool;
         private readonly IAmazonCognitoIdentityProvider _provider;
         private readonly IConfiguration _config;
@@ -32,7 +32,7 @@ namespace WebAdvert.Web.Controllers
             IConfiguration config)
         {
             _signInManager = signInManager;
-            _userManager = userManager as CognitoUserManager<CognitoUser>;
+            _userManager = userManager;
             _pool = pool;
             _provider = provider;
             _config = config;
@@ -90,7 +90,7 @@ namespace WebAdvert.Web.Controllers
                     return await Task.Run(() => View(model));
                 }
 
-                var result = await _userManager.ConfirmSignUpAsync(user, model.Code, true);
+                var result = await (_userManager as CognitoUserManager<CognitoUser>)?.ConfirmSignUpAsync(user, model.Code, true);
                 if (result.Succeeded)
                 {
                     return RedirectToAction("Index", "Home");
@@ -122,6 +122,9 @@ namespace WebAdvert.Web.Controllers
             if (ModelState.IsValid)
             {
                 var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, false);
+
+                HttpContext.User = await _signInManager.CreateUserPrincipalAsync(_pool.GetUser(model.Email));
+
                 if (result.Succeeded)
                 {
                     return RedirectToAction("Index", "Home");
