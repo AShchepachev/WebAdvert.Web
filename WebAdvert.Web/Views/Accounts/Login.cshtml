@@ -1,7 +1,7 @@
-﻿@model WebAdvert.Web.Models.Accounts.SignupModel
+﻿@model WebAdvert.Web.Models.Accounts.LoginModel
 
 @{
-    ViewData["Title"] = "Signup Page";
+    ViewData["Title"] = "Login Page";
 }
 
 <!DOCTYPE html>
@@ -9,13 +9,20 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width" />
-    <title>Signup</title>
+    <title>Login using your email and password</title>
 </head>
 <body>
 
 <div class="row">
     <div class="col-md-4">
-        <form method="post" asp-action="Signup" asp-controller="Account">
+        <h5>
+            <a asp-controller="Accounts" asp-action="Signup">
+                Signup if you are not a member
+            </a>
+        </h5>
+        <hr />
+
+        <form method="post" asp-action="Login" asp-controller="Accounts">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <div class="form-group">
                 <label asp-for="Email" class="control-label"></label>
@@ -27,13 +34,16 @@
                 <input asp-for="Password" class="form-control" />
                 <span asp-validation-for="Password" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="ConfirmPassord" class="control-label"></label>
-                <input asp-for="ConfirmPassord" class="form-control" />
-                <span asp-validation-for="ConfirmPassord" class="text-danger"></span>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input class="form-check-input" asp-for="RememberMe" /> @Html.DisplayNameFor(model => model.RememberMe)
+                </label>
             </div>
             <div class="form-group">
-                <button type="submit" class="btn btn-primary">Signup</button>
+                <input type="submit" value="Login" class="btn btn-primary" />
+                <a asp-controller="Accounts" asp-action="ForgotPassword">
+                    Forgot password?
+                </a>
             </div>
         </form>
     </div>

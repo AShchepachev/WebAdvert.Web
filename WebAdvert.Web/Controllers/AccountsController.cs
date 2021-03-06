@@ -16,25 +16,22 @@ using WebAdvert.Web.Models.Accounts;
 
 namespace WebAdvert.Web.Controllers
 {
-    public class AccountController : Controller
+    public class AccountsController : Controller
     {
         private readonly SignInManager<CognitoUser> _signInManager;
         private readonly UserManager<CognitoUser> _userManager;
         private readonly CognitoUserPool _pool;
-        private readonly IAmazonCognitoIdentityProvider _provider;
         private readonly IConfiguration _config;
 
-        public AccountController(
+        public AccountsController(
             SignInManager<CognitoUser> signInManager,
             UserManager<CognitoUser> userManager,
             CognitoUserPool pool,
-            IAmazonCognitoIdentityProvider provider,
             IConfiguration config)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _pool = pool;
-            _provider = provider;
             _config = config;
         }
 
@@ -145,43 +142,31 @@ namespace WebAdvert.Web.Controllers
         {
             var user = await _userManager.FindByEmailAsync("artaws@mailinator.com");
 
-            var request = new ForgotPasswordRequest
-            {
-                ClientId = user.ClientID,
-                Username = user.Username,
-                SecretHash = GetSecretHash(user)
-            };
-            
-            var result = await _provider.ForgotPasswordAsync(request).ConfigureAwait(false);
+            await user.ForgotPasswordAsync();
 
-            if (result.HttpStatusCode == HttpStatusCode.OK)
-            {
-                return RedirectToPage("ConfirmResetPassword");
-            }
-            
-            return await Task.Run(() => View());
+            return RedirectToPage("ConfirmResetPassword", new ConfirmModel { Email = user.Username });
         }
 
         [HttpPost]
         public async Task<IActionResult> ConfirmResetPassword(ConfirmModel model)
         {
-            //_pool.ConfirmForgotPassword(model.)
+            //if (ModelState.IsValid)
+            //{
+            //    var user = await _userManager.FindByEmailAsync("artaws@mailinator.com");
 
-            var user = await _userManager.FindByEmailAsync("artaws@mailinator.com");
+            //    if (user == null)
+            //    {
+            //        ModelState.AddModelError("NotFound", "A user with the given email was not found");
+            //        return View(model);
+            //    }
 
-            var request = new ForgotPasswordRequest
-            {
-                ClientId = user.ClientID,
-                Username = user.Username,
-                SecretHash = GetSecretHash(user)
-            };
+            //    await user.ConfirmForgotPasswordAsync(model.ConfirmationCode, model.NewPassword);
 
-            var result = await _provider.ForgotPasswordAsync(request).ConfigureAwait(false);
-
-            if (result.HttpStatusCode == HttpStatusCode.OK)
-            {
-                return RedirectToPage("ConfirmResetPassword");
-            }
+            //    if (result.HttpStatusCode == HttpStatusCode.OK)
+            //    {
+            //        return RedirectToPage("ConfirmResetPassword");
+            //    }
+            //}
 
             return await Task.Run(() => View());
         }

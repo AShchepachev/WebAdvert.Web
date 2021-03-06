@@ -1,17 +1,18 @@
+//using AutoMapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using WebAdvert.Web.ServiceClients;
-using WebAdvert.Web.Services;
-using AutoMapper;
 using Polly;
 using Polly.Extensions.Http;
-using System.Net.Http;
 using System;
 using System.Net;
-using Microsoft.AspNetCore.Http;
+using System.Net.Http;
+using WebAdvert.Web.ServiceClients;
+using WebAdvert.Web.Services;
 
 namespace WebAdvert.Web
 {
@@ -35,23 +36,25 @@ namespace WebAdvert.Web
             });
 
             services.AddCognitoIdentity(options =>
-                options.Password = new Microsoft.AspNetCore.Identity.PasswordOptions
                 {
-                    RequireDigit = false,
-                    RequiredLength = 6,
-                    RequiredUniqueChars = 0,
-                    RequireLowercase = false,
-                    RequireNonAlphanumeric = false,
-                    RequireUppercase = false
+                    options.Password = new PasswordOptions
+                    {
+                        RequireDigit = false,
+                        RequiredLength = 6,
+                        RequiredUniqueChars = 0,
+                        RequireLowercase = false,
+                        RequireNonAlphanumeric = false,
+                        RequireUppercase = false
+                    };
                 }
             );
 
             services.ConfigureApplicationCookie(options =>
             {
-                options.LoginPath = "/Account/Login";
+                options.LoginPath = new PathString("/Accounts/Login");
             }); 
             
-            services.AddAutoMapper();
+            services.AddAutoMapper(typeof(AdvertApiProfile), typeof(SearchApiProfile));
             services.AddTransient<IFileUploader, S3FileUploader>();
             
             IAsyncPolicy<HttpResponseMessage> retryPolicy = GetRetryPolicy();
@@ -67,19 +70,6 @@ namespace WebAdvert.Web
             services.AddControllersWithViews();
         }
 
-        private IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPatternPolicy()
-        {
-            return HttpPolicyExtensions.HandleTransientHttpError()
-                .CircuitBreakerAsync(3, TimeSpan.FromSeconds(30));
-        }
-
-        private IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
-        {
-            return HttpPolicyExtensions.HandleTransientHttpError()
-                .OrResult(msg => msg.StatusCode == HttpStatusCode.NotFound)
-                .WaitAndRetryAsync(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
-        }
-
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
@@ -93,9 +83,10 @@ namespace WebAdvert.Web
             }
             app.UseStaticFiles();
 
-            app.UseRouting();
-
+            app.UseCookiePolicy();
             app.UseAuthentication();
+
+            app.UseRouting();
 
             app.UseAuthorization();
 
@@ -106,5 +97,19 @@ namespace WebAdvert.Web
                     pattern: "{controller=Home}/{action=Index}/{id?}");
             });
         }
+
+        private IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPatternPolicy()
+        {
+            return HttpPolicyExtensions.HandleTransientHttpError()
+                .CircuitBreakerAsync(3, TimeSpan.FromSeconds(30));
+        }
+
+        private IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+        {
+            return HttpPolicyExtensions.HandleTransientHttpError()
+                .OrResult(msg => msg.StatusCode == HttpStatusCode.NotFound)
+                .WaitAndRetryAsync(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+        }
+
     }
 }
