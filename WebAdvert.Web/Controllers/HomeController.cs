@@ -27,13 +27,14 @@ namespace WebAdvert.Web.Controllers
             _advertApiClient = advertApiClient;
         }
 
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> Index()
         {
-            var allAds = await _advertApiClient.GetAllAsync();
-            var allViewModels = allAds.Select(x => _mapper.Map<IndexViewModel>(x));
+            //var allAds = await _advertApiClient.GetAllAsync();
+            //var allViewModels = allAds.Select(x => _mapper.Map<IndexViewModel>(x));
 
-            return View(allViewModels);
+            //return View(allViewModels);
+            return View();
         }
 
         public IActionResult Privacy()

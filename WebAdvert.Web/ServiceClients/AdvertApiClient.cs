@@ -10,6 +10,8 @@ using AutoMapper;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System.Net.Http.Json;
+using Amazon.ServiceDiscovery;
+using Amazon.ServiceDiscovery.Model;
 
 namespace WebAdvert.Web.ServiceClients
 {
@@ -26,6 +28,23 @@ namespace WebAdvert.Web.ServiceClients
             _client = client;
             _mapper = mapper;
             _baseAddress = _config["AdvertApi:BaseUrl"];
+
+            var discoveryService = new AmazonServiceDiscoveryClient();
+            var response = discoveryService.DiscoverInstancesAsync(new DiscoverInstancesRequest
+            {
+                ServiceName = "advertapi-nohealthcheck", // name of service in namespace in cloudmap;
+                NamespaceName = "WebAdvertisement"       // name of namespace in cloudmap;
+            });
+            var instances = response.GetAwaiter().GetResult().Instances; // need to randomize becaise cloudmap does not suppurt LB
+
+            if (instances.Count > 0)
+            {
+                var ipv4 = instances[0].Attributes["AWS_INSTANCE_IPV4"];
+                var port = instances[0].Attributes["AWS_INSTANCE_PORT"];
+
+                _baseAddress = new UriBuilder(Uri.UriSchemeHttp, ipv4, Int32.Parse(port), "api/advert/v1").Path;
+            }
+
         }
 
         public async Task<AdvertResponse> CreateAsync(CreateAdvertModel model)

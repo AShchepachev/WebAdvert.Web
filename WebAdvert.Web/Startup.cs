@@ -56,7 +56,12 @@ namespace WebAdvert.Web
             
             services.AddAutoMapper(typeof(AdvertApiProfile), typeof(SearchApiProfile));
             services.AddTransient<IFileUploader, S3FileUploader>();
-            
+
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllOrigin", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            });
+
             IAsyncPolicy<HttpResponseMessage> retryPolicy = GetRetryPolicy();
             IAsyncPolicy<HttpResponseMessage> circuitBrakerPolicy  = GetCircuitBreakerPatternPolicy();
             services.AddHttpClient<IAdvertApiClient, AdvertApiClient>()
@@ -85,6 +90,8 @@ namespace WebAdvert.Web
 
             app.UseCookiePolicy();
             app.UseAuthentication();
+            
+            app.UseCors();
 
             app.UseRouting();
 
