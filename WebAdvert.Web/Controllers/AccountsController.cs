@@ -171,6 +171,15 @@ namespace WebAdvert.Web.Controllers
             return await Task.Run(() => View());
         }
 
+        [HttpPost]
+        public async Task<IActionResult> Signout()
+        {
+            if (User.Identity.IsAuthenticated) 
+                await _signInManager.SignOutAsync();
+
+            return RedirectToAction("Login");
+        }
+
         private string GetSecretHash(CognitoUser user)
         {
             var secret = _config["AWS:UserPoolClientSecret"];
