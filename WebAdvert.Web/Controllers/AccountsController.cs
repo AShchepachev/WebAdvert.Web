@@ -171,7 +171,7 @@ namespace WebAdvert.Web.Controllers
             return await Task.Run(() => View());
         }
 
-        [HttpPost]
+        [HttpGet]
         public async Task<IActionResult> Signout()
         {
             if (User.Identity.IsAuthenticated) 
